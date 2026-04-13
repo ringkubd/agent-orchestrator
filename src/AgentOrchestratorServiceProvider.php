@@ -9,6 +9,10 @@ use Anwar\AgentOrchestrator\Services\ContextManager;
 use Anwar\AgentOrchestrator\Services\AiSearchService;
 use Anwar\AgentOrchestrator\Console\Commands\SyncChefBrain;
 use Anwar\AgentOrchestrator\Console\Commands\SyncProductsToQdrant;
+use Anwar\AgentOrchestrator\Contracts\AiProviderInterface;
+use Anwar\AgentOrchestrator\Providers\OpenAiProvider;
+use Anwar\AgentOrchestrator\Providers\OllamaProvider;
+use Anwar\AgentOrchestrator\Services\AiAgentService;
 
 class AgentOrchestratorServiceProvider extends ServiceProvider
 {
@@ -33,11 +37,20 @@ class AgentOrchestratorServiceProvider extends ServiceProvider
             return new ContextManager();
         });
 
+        $this->app->singleton(AiProviderInterface::class, function ($app) {
+            $provider = config('agent.ai_provider', 'openai');
+            if ($provider === 'ollama') {
+                return new OllamaProvider();
+            }
+            return new OpenAiProvider();
+        });
+
         $this->app->singleton(AiAgentService::class, function ($app) {
             return new AiAgentService(
                 $app->make(ContextManager::class),
                 $app->make(AiSearchService::class),
-                $app->make(VectorService::class)
+                $app->make(VectorService::class),
+                $app->make(AiProviderInterface::class)
             );
         });
 

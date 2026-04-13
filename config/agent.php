@@ -2,7 +2,10 @@
 
 return [
     'webhook_secret' => env('AGENT_WEBHOOK_SECRET', 'secret'),
+    'ai_provider' => env('AI_PROVIDER', 'openai'),
     'openai_model' => env('AGENT_OPENAI_MODEL', 'gpt-4o-mini'),
+    'ollama_base_url' => env('OLLAMA_BASE_URL', 'http://localhost:11435'),
+    'ollama_model' => env('OLLAMA_MODEL', 'gemma4:e4b'),
     'system_prompt' => env('AGENT_SYSTEM_PROMPT', 'You are a helpful assistant for Gunma Halal Food.'),
     'meilisearch_host' => env('MEILISEARCH_HOST', 'http://127.0.0.1:7700'),
     'meilisearch_key' => env('MEILISEARCH_KEY', 'dxjk6Kq39DRTiVLn'),
