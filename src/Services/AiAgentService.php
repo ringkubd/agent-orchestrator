@@ -120,6 +120,7 @@ class AiAgentService
                 'model' => $model,
                 'messages' => $messages,
                 'tools' => $tools,
+                'stream' => false, // Prevent partial data overhead
             ]);
 
             $message = $response->choices[0]->message;
@@ -165,13 +166,17 @@ class AiAgentService
             $finalResponse = OpenAI::chat()->create([
                 'model' => $model,
                 'messages' => $messages,
+                'stream' => false,
             ]);
 
             $finalContent = $finalResponse->choices[0]->message->content ?? 'Processed your request, but I am having trouble speaking.';
             return $this->wrapInHtmlTemplate($finalContent);
 
         } catch (\Exception $e) {
-            \Log::error("AI Agent Error: " . $e->getMessage());
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "AI Agent Error: " . $e->getMessage(), [
+                'phone' => $phone,
+                'trace' => $e->getTraceAsString(),
+            ]);
             $errorMsg = "Salam! Ami ektu technical osubidhায় achi. Ektu por abar chesta korben ki?";
             return $this->wrapInHtmlTemplate($errorMsg);
         }
@@ -276,7 +281,7 @@ class AiAgentService
             return $output;
 
         } catch (\Exception $e) {
-            \Log::error("Chef tool error: " . $e->getMessage());
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Chef tool error: " . $e->getMessage());
             return "I encountered an error while consulting my recipe book.";
         }
     }
@@ -307,7 +312,7 @@ class AiAgentService
                 ];
             }
         } catch (\Exception $e) {
-            \Log::error("Add to cart tool error: " . $e->getMessage());
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Add to cart tool error: " . $e->getMessage());
         }
 
         return ['error' => 'Failed to add items to cart.'];

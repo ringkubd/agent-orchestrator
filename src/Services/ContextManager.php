@@ -27,7 +27,7 @@ class ContextManager
                 }
             }
         } catch (\Exception $e) {
-            \Log::warning('Failed to load Customer context: ' . $e->getMessage());
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('warning', 'Failed to load Customer context: ' . $e->getMessage());
         }
 
         return "Talking to an unknown customer.";

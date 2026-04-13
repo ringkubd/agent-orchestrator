@@ -33,7 +33,7 @@ class AiSearchService
             $queryVector = $precomputedVector ?? $this->vector->getEmbedding($query);
             
             if (!$queryVector) {
-                Log::error("Failed to generate embedding for query: {$query}");
+                \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Failed to generate embedding for query: {$query}");
                 return [];
             }
 
@@ -46,7 +46,7 @@ class AiSearchService
             }, $results);
 
         } catch (\Exception $e) {
-            Log::error("Qdrant Search Failed on collection [{$indexName}]: " . $e->getMessage());
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Qdrant Search Failed on collection [{$indexName}]: " . $e->getMessage());
             return [];
         }
     }

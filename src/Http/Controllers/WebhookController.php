@@ -48,9 +48,9 @@ class WebhookController extends Controller
                 'reply' => $finalMessage,
             ]);
         } catch (\Exception $e) {
-            \Log::error('Agent Orchestrator Error: ' . $e->getMessage(), [
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', 'Agent Orchestrator Error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
-                'payload' => $validated,
+                'payload' => $validated ?? [],
             ]);
 
             return response()->json([

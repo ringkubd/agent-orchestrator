@@ -14,7 +14,8 @@ class QdrantService
     public function __construct()
     {
         $this->host = config('agent.qdrant_host', 'http://localhost:6333');
-        $this->timeout = (int) config('agent.qdrant_timeout', 5);
+        // Cap timeout at 10s
+        $this->timeout = min((int) config('agent.qdrant_timeout', 5), 10);
         $this->client = new GuzzleClient([
             'timeout' => $this->timeout,
             'connect_timeout' => 2,
@@ -46,7 +47,7 @@ class QdrantService
             ]);
             return true;
         } catch (\Exception $e) {
-            Log::error("Qdrant Collection Creation Failed [{$name}]: " . $e->getMessage());
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Qdrant Collection Creation Failed [{$name}]: " . $e->getMessage());
             return false;
         }
     }
@@ -66,7 +67,7 @@ class QdrantService
             ]);
             return true;
         } catch (\Exception $e) {
-            Log::error("Qdrant Upsert Failed [{$collection}]: " . $e->getMessage());
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Qdrant Upsert Failed [{$collection}]: " . $e->getMessage());
             return false;
         }
     }
@@ -88,7 +89,7 @@ class QdrantService
             $data = json_decode($response->getBody()->getContents(), true);
             return $data['result'] ?? [];
         } catch (\Exception $e) {
-            Log::error("Qdrant Search Failed [{$collection}]: " . $e->getMessage());
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Qdrant Search Failed [{$collection}]: " . $e->getMessage());
             return [];
         }
     }
@@ -102,7 +103,7 @@ class QdrantService
             $this->client->delete($this->host . "/collections/{$name}");
             return true;
         } catch (\Exception $e) {
-            Log::error("Qdrant Collection Deletion Failed [{$name}]: " . $e->getMessage());
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Qdrant Collection Deletion Failed [{$name}]: " . $e->getMessage());
             return false;
         }
     }
