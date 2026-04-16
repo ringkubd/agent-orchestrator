@@ -56,6 +56,13 @@ class AiSearchService
      */
     public function searchMultiple(array $collections, array $queryVector, int $limit = 5): array
     {
+        // 1. Check Cache
+        $cacheKey = "search_res_" . md5(json_encode([$collections, $queryVector, $limit]));
+        $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        if ($cached) {
+            return $cached;
+        }
+
         try {
             $host = $this->qdrant->getHost();
             $timeout = $this->qdrant->getTimeout();
@@ -80,6 +87,36 @@ class AiSearchService
                     \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Parallel Qdrant Search Failed [{$col}]");
                 }
             }
+
+            // 1.5. Ingredient Expansion: If recipes found, search for their ingredients
+            if (!empty($finalResults['recipes']) && in_array('products', $collections)) {
+                $ingredients = [];
+                foreach ($finalResults['recipes'] as $recipe) {
+                    if (isset($recipe['ingredients']) && is_array($recipe['ingredients'])) {
+                        $ingredients = array_merge($ingredients, array_slice($recipe['ingredients'], 0, 3));
+                    }
+                }
+                
+                if (!empty($ingredients)) {
+                    $ingredientTags = implode(", ", array_unique($ingredients));
+                    $ingVector = $this->vector->getEmbedding("Products for: " . $ingredientTags);
+                    if ($ingVector) {
+                        $ingResults = $this->qdrant->search('products', $ingVector, 5);
+                        $formattedIng = $this->formatResults($ingResults);
+                        // Merge without duplicates based on ID
+                        $existingIds = array_column($finalResults['products'], 'id');
+                        foreach ($formattedIng as $item) {
+                            if (!in_array($item['id'], $existingIds)) {
+                                $finalResults['products'][] = $item;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Store in Cache (default 1 hour)
+            $ttl = config('agent.search_cache_ttl', 3600);
+            \Illuminate\Support\Facades\Cache::put($cacheKey, $finalResults, $ttl);
 
             return $finalResults;
         } catch (\Exception $e) {

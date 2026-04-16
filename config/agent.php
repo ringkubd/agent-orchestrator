@@ -17,4 +17,8 @@ return [
     'ollama_host' => env('OLLAMA_HOST', 'http://127.0.0.1:11434'),
     'ollama_embedding_model' => env('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text'),
     'openai_embedding_model' => env('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+    'max_response_time' => env('AGENT_MAX_RESPONSE_TIME', 30),
+    'search_cache_ttl' => env('AGENT_SEARCH_CACHE_TTL', 3600),
+    'history_limit' => env('AGENT_CONVO_HISTORY_LIMIT', 10),
+    'history_ttl' => env('AGENT_CONVO_TTL', 3600),
 ];

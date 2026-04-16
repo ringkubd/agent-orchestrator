@@ -18,6 +18,17 @@ class SyncProductsToQdrant extends Command
         $collectionName = 'products';
         $dimensions = $vectorService->getDimensions();
 
+        // 1. Dimension Guard: Check existing collection info
+        $host = $qdrantService->getHost();
+        $response = \Illuminate\Support\Facades\Http::get("{$host}/collections/{$collectionName}");
+        if ($response->successful()) {
+            $currentDim = $response->json('result.config.params.vectors.size');
+            if ($currentDim && $currentDim != $dimensions) {
+                $this->warn("Dimension mismatch: Qdrant ({$currentDim}) != Config ({$dimensions}). Recreating collection...");
+                $qdrantService->deleteCollection($collectionName);
+            }
+        }
+
         if (!$qdrantService->ensureCollection($collectionName, $dimensions)) {
             $this->error("Failed to ensure collection: {$collectionName}");
             return Command::FAILURE;

@@ -33,6 +33,7 @@ class WebhookController extends Controller
             'phone' => 'required|string',
             'message' => 'required|string',
             'platform' => 'nullable|string',
+            'session_id' => 'nullable|string',
         ]);
 
         try {
@@ -42,7 +43,8 @@ class WebhookController extends Controller
             $finalMessage = $this->aiAgentService->processMessage(
                 $validated['phone'],
                 $validated['message'],
-                $platform
+                $platform,
+                $validated['session_id'] ?? null
             );
 
             // 4. Return the formatted response for n8n

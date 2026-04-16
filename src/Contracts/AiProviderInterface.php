@@ -9,7 +9,8 @@ interface AiProviderInterface
      *
      * @param string $systemPrompt
      * @param string $userPrompt
+     * @param array $history
      * @return string
      */
-    public function generateResponse(string $systemPrompt, string $userPrompt): string;
+    public function generateResponse(string $systemPrompt, string $userPrompt, array $history = []): string;
 }

@@ -75,6 +75,9 @@ class AgentOrchestratorServiceProvider extends ServiceProvider
         // Load Routes
         $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
 
+        // Load Migrations
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+
         // Register Commands
         if ($this->app->runningInConsole()) {
             $this->commands([
