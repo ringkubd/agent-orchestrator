@@ -36,10 +36,13 @@ class WebhookController extends Controller
         ]);
 
         try {
+            $platform = $validated['platform'] ?? 'web';
+
             // 3. Process the message using the AI Agent Service
             $finalMessage = $this->aiAgentService->processMessage(
                 $validated['phone'],
-                $validated['message']
+                $validated['message'],
+                $platform
             );
 
             // 4. Return the formatted response for n8n

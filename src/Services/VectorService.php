@@ -68,22 +68,13 @@ class VectorService
      */
     protected function getOpenAiEmbedding(string $text): ?array
     {
-        $apiKey = config('openai.api_key');
-        
         try {
-            $response = $this->client->post('https://api.openai.com/v1/embeddings', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $apiKey,
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => [
-                    'input' => $text,
-                    'model' => $this->model,
-                ],
+            $response = \OpenAI\Laravel\Facades\OpenAI::embeddings()->create([
+                'model' => $this->model,
+                'input' => $text,
             ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
-            return $data['data'][0]['embedding'] ?? null;
+            return $response->embeddings[0]->embedding ?? null;
         } catch (\Exception $e) {
             \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "OpenAI Embedding Failed: " . $e->getMessage());
             return null;
@@ -99,11 +90,9 @@ class VectorService
         
         // Final safety check to avoid 0.0.0.0 or empty strings
         if (empty($host) || $host === '0.0.0.0') {
-            $host = 'http://localhost:11435';
+            $host = 'http://localhost:11434';
         }
 
-        $endpoint = rtrim($host, '/') . '/api/embeddings';
-        
         $endpoint = rtrim($host, '/') . '/api/embeddings';
         
         try {

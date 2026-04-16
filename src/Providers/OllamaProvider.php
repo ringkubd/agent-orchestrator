@@ -12,7 +12,7 @@ class OllamaProvider implements AiProviderInterface
      */
     public function generateResponse(string $systemPrompt, string $userPrompt): string
     {
-        $baseUrl = rtrim(config('agent.ollama_base_url', 'http://localhost:11435'), '/');
+        $baseUrl = rtrim(config('agent.ollama_base_url', 'http://localhost:11434'), '/');
         $model = config('agent.ollama_model', 'gemma2:2b');
 
         // Note: stream => false is important for n8n to avoid streaming overhead

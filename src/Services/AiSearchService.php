@@ -3,6 +3,8 @@
 namespace Anwar\AgentOrchestrator\Services;
 
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\Response;
 
 class AiSearchService
 {
@@ -41,14 +43,60 @@ class AiSearchService
             $results = $this->qdrant->search($indexName, $queryVector, $limit);
 
             // 3. Format results to match previous Meilisearch output (hits)
-            return array_map(function($point) {
-                return $point['payload'] ?? [];
-            }, $results);
+            return $this->formatResults($results);
 
         } catch (\Exception $e) {
             \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Qdrant Search Failed on collection [{$indexName}]: " . $e->getMessage());
             return [];
         }
+    }
+
+    /**
+     * Search multiple collections in parallel.
+     */
+    public function searchMultiple(array $collections, array $queryVector, int $limit = 5): array
+    {
+        try {
+            $host = $this->qdrant->getHost();
+            $timeout = $this->qdrant->getTimeout();
+
+            $responses = Http::pool(fn ($pool) => array_map(
+                fn ($col) => $pool->as($col)->timeout($timeout)->post("{$host}/collections/{$col}/points/search", [
+                    'vector' => $queryVector,
+                    'limit' => $limit,
+                    'with_payload' => true,
+                ]),
+                $collections
+            ));
+
+            $finalResults = [];
+            foreach ($collections as $col) {
+                $resp = $responses[$col] ?? null;
+                if ($resp instanceof Response && $resp->successful()) {
+                    $data = $resp->json();
+                    $finalResults[$col] = $this->formatResults($data['result'] ?? []);
+                } else {
+                    $finalResults[$col] = [];
+                    \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Parallel Qdrant Search Failed [{$col}]");
+                }
+            }
+
+            return $finalResults;
+        } catch (\Exception $e) {
+            \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Parallel Search Error: " . $e->getMessage());
+            // Return empty arrays for all collections so the agent can still respond
+            return array_fill_keys($collections, []);
+        }
+    }
+
+    /**
+     * Helper to format Qdrant results.
+     */
+    protected function formatResults(array $results): array
+    {
+        return array_map(function($point) {
+            return $point['payload'] ?? [];
+        }, $results);
     }
 
     /**

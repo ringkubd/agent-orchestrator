@@ -2,12 +2,11 @@
 
 namespace Anwar\AgentOrchestrator\Services;
 
-use GuzzleHttp\Client as GuzzleClient;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class QdrantService
 {
-    protected GuzzleClient $client;
     protected string $host;
     protected int $timeout;
 
@@ -16,10 +15,16 @@ class QdrantService
         $this->host = config('agent.qdrant_host', 'http://localhost:6333');
         // Cap timeout at 10s
         $this->timeout = min((int) config('agent.qdrant_timeout', 5), 10);
-        $this->client = new GuzzleClient([
-            'timeout' => $this->timeout,
-            'connect_timeout' => 2,
-        ]);
+    }
+
+    public function getHost(): string
+    {
+        return $this->host;
+    }
+
+    public function getTimeout(): int
+    {
+        return $this->timeout;
     }
 
     /**
@@ -28,8 +33,8 @@ class QdrantService
     public function ensureCollection(string $name, int $dimensions): bool
     {
         try {
-            $response = $this->client->get($this->host . "/collections/{$name}");
-            if ($response->getStatusCode() === 200) {
+            $response = Http::timeout($this->timeout)->get($this->host . "/collections/{$name}");
+            if ($response->successful()) {
                 return true;
             }
         } catch (\Exception $e) {
@@ -37,12 +42,10 @@ class QdrantService
         }
 
         try {
-            $this->client->put($this->host . "/collections/{$name}", [
-                'json' => [
-                    'vectors' => [
-                        'size' => $dimensions,
-                        'distance' => 'Cosine',
-                    ],
+            Http::timeout($this->timeout)->put($this->host . "/collections/{$name}", [
+                'vectors' => [
+                    'size' => $dimensions,
+                    'distance' => 'Cosine',
                 ],
             ]);
             return true;
@@ -62,8 +65,8 @@ class QdrantService
         }
 
         try {
-            $this->client->put($this->host . "/collections/{$collection}/points", [
-                'json' => ['points' => $points],
+            Http::timeout($this->timeout)->put($this->host . "/collections/{$collection}/points", [
+                'points' => $points,
             ]);
             return true;
         } catch (\Exception $e) {
@@ -78,15 +81,13 @@ class QdrantService
     public function search(string $collection, array $vector, int $limit = 5): array
     {
         try {
-            $response = $this->client->post($this->host . "/collections/{$collection}/points/search", [
-                'json' => [
-                    'vector' => $vector,
-                    'limit' => $limit,
-                    'with_payload' => true,
-                ],
+            $response = Http::timeout($this->timeout)->post($this->host . "/collections/{$collection}/points/search", [
+                'vector' => $vector,
+                'limit' => $limit,
+                'with_payload' => true,
             ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
+            $data = $response->json();
             return $data['result'] ?? [];
         } catch (\Exception $e) {
             \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Qdrant Search Failed [{$collection}]: " . $e->getMessage());
@@ -100,7 +101,7 @@ class QdrantService
     public function deleteCollection(string $name): bool
     {
         try {
-            $this->client->delete($this->host . "/collections/{$name}");
+            Http::timeout($this->timeout)->delete($this->host . "/collections/{$name}");
             return true;
         } catch (\Exception $e) {
             \Anwar\AgentOrchestrator\Jobs\ProcessAsyncLog::dispatch('error', "Qdrant Collection Deletion Failed [{$name}]: " . $e->getMessage());
